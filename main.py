@@ -178,9 +178,7 @@ class MainWindow(Gtk.ApplicationWindow):
         entry_box.set_margin_bottom(10)
         
         box.append(entry_box)
-      
-        separator = Gtk.Separator()
-        box.append(separator)
+        box.append(Gtk.Separator())
 
         scrolled = Gtk.ScrolledWindow.new()
         scrolled.set_hexpand(True)
@@ -425,7 +423,6 @@ class MainWindow(Gtk.ApplicationWindow):
     
 
     def listbox_snippet_row_clicked(self, listbox, listboxrow, index):
-        #print(f'Geklickt auf: {self.data[index + 1][1][listboxrow.get_index()]}')
         self.active_snippet = self.data[index + 1][1][listboxrow.get_index()]
         print(self.active_snippet)
         try:       
@@ -514,15 +511,13 @@ class MainWindow(Gtk.ApplicationWindow):
             self.data = data
             self.title.set_subtitle(f"Geöffnete Sammlung: {data[0]}")
             self.stack.set_visible_child(self.page2)
-            self.paned.set_start_child(self.listbox_categories())
-            
+            self.paned.set_start_child(self.listbox_categories())    
         else: pass
 
         dialog.close()
         
         
-    def content_sourceview(self): 
-        
+    def content_sourceview(self):    
         box_sourceview = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         
         self.tabview = Adw.TabView()
@@ -607,8 +602,7 @@ class MainWindow(Gtk.ApplicationWindow):
             widget.set_show_right_margin(True)
             self.button_edit = False 
         else:
-            self.active_snippet.content = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), include_hidden_chars=True)
-            
+            self.active_snippet.content = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), include_hidden_chars=True)          
             widget.set_editable(False)
             widget.set_cursor_visible(False)
             widget.set_highlight_current_line(False)
@@ -618,11 +612,8 @@ class MainWindow(Gtk.ApplicationWindow):
 
 
     def tag_list_refresh(self):
-        
-        tags = []
-        
+        tags = []    
         for i in range(len(self.data) - 1):
-
             for j in range(len(self.data[i + 1])):
                 #print(self.data[i + 1][1][j].tags)
                 try:
