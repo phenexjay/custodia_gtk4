@@ -1,0 +1,39 @@
+
+#listbox_cards {
+  border-radius: 5px;
+  box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7); 
+  background-color: rgba(137,171,25,0.3);
+}
+
+#listbox_cards:hover {
+  background-color: rgba(137,171,25,0.5);
+}
+
+#tags {
+  background-color: @blue_3;
+  color:  	@light_1;
+  padding-top: 5px;
+  padding-right: 5px;
+  padding-bottom: 5px;
+  padding-left: 5px;
+  border-radius: 5px;
+  font-size: 11px;
+}
+
+#tags_list {
+  background-color: rgb(137,171,25);
+  color: @light_1;
+  padding-top: 5px;
+  padding-right: 5px;
+  padding-bottom: 5px;
+  padding-left: 5px;
+  border-radius: 5px;
+  font-size: 13px;
+  font-weight: bold;
+  box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7); 
+}
+headerbar {
+  background: rgb(137,171,25);
+  color: @light_1;
+}
+
