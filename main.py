@@ -5,25 +5,20 @@ import time
 
 import gi
 from datetime import datetime
+from files import *
 
 gi.require_version(namespace='Gtk', version='4.0')
 gi.require_version(namespace='Adw', version='1')
 gi.require_version('GtkSource', '5')
-
 from gi.repository import Gio, Gtk, Gdk, Adw, Pango, GtkSource
-
-from files import *
 
 PANE_POSITION = 345
 
 
-
 class MainWindow(Gtk.ApplicationWindow):
-    
-    
+
     provider = Gtk.CssProvider.new()
     provider.load_from_file(Gio.File.new_for_path("./style/style.css"))
-    #provider.load_from_data(css)
     
     Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), provider, 500);
     languages = GtkSource.LanguageManager()  
@@ -33,7 +28,6 @@ class MainWindow(Gtk.ApplicationWindow):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.data = None
-        
         
         self.set_title(title="Custodia Snippet Manager")
         self.set_default_size(width=int(1200), height=int(800))
@@ -56,6 +50,7 @@ class MainWindow(Gtk.ApplicationWindow):
         button_new.set_icon_name("document-new-symbolic")
         #button_new.connect("clicked", self.button_new_file)
         button_new.set_tooltip_text("Eine neue Kollektion erstellen")
+        
         popover = Gtk.Popover()
         popover_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         label = Gtk.Label.new("Kollektion benennen:")
@@ -63,17 +58,19 @@ class MainWindow(Gtk.ApplicationWindow):
         popover.set_child(popover_box)
         button_new.set_popover(popover)
         box.append(button_new)
-        
-        sep = Gtk.Separator()
-        sep.get_style_context().add_class("spacer")
-        box.append(sep)
 
-        #popover.popup()
-        
+        box.append(Gtk.Separator()) 
+
         self.title = Adw.WindowTitle()
         self.title.set_title("Custodia Snippet Manager")
         self.title.set_subtitle("Keine Kollektion geöffnet")
         
+        button_settings =Gtk.Button.new()
+        button_settings.set_icon_name("menu-symbolic")
+        button_settings.connect("clicked", self.button_open_file)
+        button_settings.set_tooltip_text("Einstellungsfenster anzeigen")
+        box.append(button_settings)
+
         headerbar.set_title_widget(self.title)
         headerbar.pack_start(box)
         
@@ -103,7 +100,6 @@ class MainWindow(Gtk.ApplicationWindow):
         
         self.stack.set_visible_child(self.page1)
         box.append(child=self.stack)
-        
         
         return box
 
