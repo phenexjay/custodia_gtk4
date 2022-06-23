@@ -246,12 +246,10 @@ class MainWindow(Gtk.ApplicationWindow):
                 self.listbox.get_row_at_index(i).set_margin_end(10)
                 self.listbox.get_row_at_index(i).set_name('listbox_cards')
 
-
         scrolled.set_child(scrolled_box)
         box.append(scrolled)
         
         box.append(Gtk.Separator())
-
 
         tag_list_box = Gtk.Grid()
         tag_list_box.set_size_request(-1, 200)
@@ -262,13 +260,11 @@ class MainWindow(Gtk.ApplicationWindow):
             add = 0
 
             for i in range(len(tag_list)):
-            
                 i = 0
                 j = 0
                 add = 0
                 
                 while j < len(tag_list):
-
                     label = Gtk.Label.new()
                     label.set_label(tag_list[j])
                     label.set_halign(Gtk.Align.START)
@@ -290,10 +286,8 @@ class MainWindow(Gtk.ApplicationWindow):
                         i = i - 4
                         add += 1
                     
-                    
             box.append(tag_list_box)
             
-
         return box
 
 
@@ -347,7 +341,6 @@ class MainWindow(Gtk.ApplicationWindow):
         scrolled_box.append(child=self.listbox)
         scrolled.set_child(box)
 
-              
         for i in range(len(self.data[listboxrow.get_index() + 1][1])):
             snippet_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
             snippet_box.set_margin_start(10)
@@ -399,7 +392,6 @@ class MainWindow(Gtk.ApplicationWindow):
             tags_box.set_margin_bottom(10)
             tags = self.data[listboxrow.get_index() + 1][1][i].tags
             
-            
             if tags == [] :
                 label = Gtk.Label.new()
                 label.set_label("Keine Tags")
@@ -414,8 +406,6 @@ class MainWindow(Gtk.ApplicationWindow):
                     label.set_label(tags[j])
                     label.set_name("tags")
                     tags_box.append(label)
-            
-            
                     
             snippet_box.append(tags_box)
             
@@ -447,7 +437,6 @@ class MainWindow(Gtk.ApplicationWindow):
             pass  
 
 
-
     def button_delete_category(self, button, listbox, listboxrow, index):
         del self.data[index+1]
         save_data(self.data)
@@ -466,6 +455,7 @@ class MainWindow(Gtk.ApplicationWindow):
         entry.set_text("")
         save_data(self.data)
         self.paned.set_start_child(self.listbox_categories())
+
 
     def button_add_snippet(self, button, entry, listbox, listboxrow):
         print(self.data[listboxrow.get_index() + 1][1])
@@ -535,11 +525,11 @@ class MainWindow(Gtk.ApplicationWindow):
         
         box_sourceview = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         
-        # self.tabview = Adw.TabView()
-        # self.tabview.add_page()
+        self.tabview = Adw.TabView()
+        self.tabview.add_page()
         
-        # tabbar = Adw.TabBar.new()
-        # tabbar.set_view(self.tabview)
+        self.tabbar = Adw.TabBar.new()
+        self.tabbar.set_view(self.tabview)
         
         self.content_sourceview = GtkSource.View()
         self.content_sourceview.set_vexpand(True)
