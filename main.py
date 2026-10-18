@@ -2,10 +2,13 @@
 """Python e GTK 4: PyGObject Gtk.self.listbox()."""
 
 import time
+from pathlib import Path
 
 import gi
 from datetime import datetime
-from files import *
+import category
+import snippet
+from files import CollectionError, load_data, save_data
 
 gi.require_version(namespace='Gtk', version='4.0')
 gi.require_version(namespace='Adw', version='1')
@@ -23,16 +26,20 @@ class MainWindow(Gtk.ApplicationWindow):
     Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), provider, 500);
     languages = GtkSource.LanguageManager()  
 
-    codeview_scrolled_window = Gtk.ScrolledWindow.new()  
+
      
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.data = None
+        self.collection_path = None
+        self.active_snippet = None
+        self.codeview_scrolled_window = Gtk.ScrolledWindow.new()
         
         self.set_title(title="Custodia Snippet Manager")
         self.set_default_size(width=int(1200), height=int(800))
         self.set_titlebar(titlebar=self.headerbar())
         self.set_child(self.main_stack())
+        self.connect("close-request", self.on_close_request)
 
 
     def headerbar(self):
@@ -48,13 +55,19 @@ class MainWindow(Gtk.ApplicationWindow):
 
         button_new = Gtk.MenuButton.new()
         button_new.set_icon_name("document-new-symbolic")
-        #button_new.connect("clicked", self.button_new_file)
+
         button_new.set_tooltip_text("Eine neue Kollektion erstellen")
         
         popover = Gtk.Popover()
         popover_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         label = Gtk.Label.new("Kollektion benennen:")
         popover_box.append(label)
+        collection_entry = Gtk.Entry()
+        popover_box.append(collection_entry)
+        collection_entry.connect("activate", self.button_new_file)
+        create_button = Gtk.Button(label="Erstellen")
+        create_button.connect("clicked", self.button_new_file, collection_entry)
+        popover_box.append(create_button)
         popover.set_child(popover_box)
         button_new.set_popover(popover)
         box.append(button_new)
@@ -67,7 +80,7 @@ class MainWindow(Gtk.ApplicationWindow):
         
         button_settings =Gtk.Button.new()
         button_settings.set_icon_name("menu-symbolic")
-        button_settings.connect("clicked", self.button_open_file)
+        button_settings.set_sensitive(False)
         button_settings.set_tooltip_text("Einstellungsfenster anzeigen")
         box.append(button_settings)
 
@@ -254,42 +267,40 @@ class MainWindow(Gtk.ApplicationWindow):
 
         if self.data != None:
             tag_list = self.tag_list_refresh()
-            count = 0
+            i = 0
+            j = 0
             add = 0
 
-            for i in range(len(tag_list)):
-                i = 0
-                j = 0
-                add = 0
-                
-                while j < len(tag_list):
-                    label = Gtk.Label.new()
-                    label.set_label(tag_list[j])
-                    label.set_halign(Gtk.Align.START)
-                    label.set_valign(Gtk.Align.START)
-                    if i == 0:
-                        label.set_margin_start(5)
-                    else:
-                        label.set_margin_start(0)
-                    label.set_margin_top(5)         
-                    label.set_margin_end(5)
-                    label.set_size_request(80, -1)
-                    label.set_ellipsize(Pango.EllipsizeMode.END)
-                    label.set_name("tags_list")
+            while j < len(tag_list):
+                label = Gtk.Label.new()
+                label.set_label(tag_list[j])
+                label.set_halign(Gtk.Align.START)
+                label.set_valign(Gtk.Align.START)
+                if i == 0:
+                    label.set_margin_start(5)
+                else:
+                    label.set_margin_start(0)
+                label.set_margin_top(5)
+                label.set_margin_end(5)
+                label.set_size_request(80, -1)
+                label.set_ellipsize(Pango.EllipsizeMode.END)
+                label.set_name("tags_list")
 
-                    tag_list_box.attach(label, i, 0 + add, 1, 1)
-                    i += 1
-                    j += 1
-                    if i == 4:
-                        i = i - 4
-                        add += 1
-                    
+                tag_list_box.attach(label, i, 0 + add, 1, 1)
+                i += 1
+                j += 1
+                if i == 4:
+                    i = i - 4
+                    add += 1
+                
             box.append(tag_list_box)
             
         return box
 
 
     def listbox_category_row_clicked(self, listbox, listboxrow):
+        if not self.reset_editor():
+            return
 
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         box.set_homogeneous(homogeneous=False)
@@ -313,7 +324,7 @@ class MainWindow(Gtk.ApplicationWindow):
         
         button = Gtk.Button()
         button.set_icon_name("add-symbolic")
-        #button.connect("clicked", self.sidebar_button_add_snippet, sidebar_entry)
+        button.connect("clicked", self.button_add_snippet, sidebar_entry, listbox, listboxrow)
         entry_box.append(button)
         
         entry_box.get_style_context().add_class("linked") 
@@ -337,7 +348,6 @@ class MainWindow(Gtk.ApplicationWindow):
         self.listbox.set_vexpand(True)
         
         scrolled_box.append(child=self.listbox)
-        scrolled.set_child(box)
 
         for i in range(len(self.data[listboxrow.get_index() + 1][1])):
             snippet_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
@@ -423,49 +433,55 @@ class MainWindow(Gtk.ApplicationWindow):
     
 
     def listbox_snippet_row_clicked(self, listbox, listboxrow, index):
+        self.button_edit.set_active(False)
+        if self.button_edit.get_active():
+            return
         self.active_snippet = self.data[index + 1][1][listboxrow.get_index()]
-        print(self.active_snippet)
-        try:       
-            buffer = self.content_sourceview.get_buffer()
-            buffer.set_text(self.data[index + 1][1][listboxrow.get_index()].content)
-            #print(self.active_snippet.content)
-            adj = self.codeview_scrolled_window.get_vadjustment().set_value(0.0) 
-        except:
-            pass  
+        buffer = self.content_sourceview.get_buffer()
+        buffer.set_text(self.active_snippet.content)
+        self.button_edit.set_sensitive(True)
+        self.codeview_scrolled_window.get_vadjustment().set_value(0.0)
 
 
     def button_delete_category(self, button, listbox, listboxrow, index):
+        if not self.reset_editor():
+            return
         del self.data[index+1]
-        save_data(self.data)
+        self.save_collection()
         self.paned.set_start_child(self.listbox_categories())
 
 
     def button_delete_snippet(self, button, listbox, listboxrow, index):
+        if not self.reset_editor():
+            return
         del self.data[listboxrow.get_index() + 1][1][index]
         self.listbox_category_row_clicked(listbox,listboxrow)
-        save_data(self.data)
+        self.save_collection()
 
 
     def listbox_add_category(self, button, entry):
-        self.data.append([category.Category(entry.get_text(), time.time()), [] ])
+        if self.data is None or not entry.get_text().strip():
+            return
+        self.data.append([category.Category(entry.get_text().strip(), time.time()), [] ])
 
         entry.set_text("")
-        save_data(self.data)
+        self.save_collection()
         self.paned.set_start_child(self.listbox_categories())
 
 
     def button_add_snippet(self, button, entry, listbox, listboxrow):
-        print(self.data[listboxrow.get_index() + 1][1])
+        if not entry.get_text().strip():
+            return
         self.data[listboxrow.get_index() + 1][1].append(snippet.Snippet(self.data[listboxrow.get_index() + 1][0].title, entry.get_text(), time.time()))
         
         entry.set_text("")
-        save_data(self.data)
+        self.save_collection()
         self.listbox_category_row_clicked(listbox,listboxrow)
 
     
     def button_return_to_categories(self, button):
-        #self.counter_snippets()
-        self.paned.set_start_child(child=self.listbox_categories())
+        if self.reset_editor():
+            self.paned.set_start_child(child=self.listbox_categories())
         
         
     def button_open_file(self, button):
@@ -499,32 +515,80 @@ class MainWindow(Gtk.ApplicationWindow):
         dialog.show()
 
 
-    def button_new_file(self, button):
-        pass
-        
-                    
-    def button_dialog_response(self, dialog, response):
-        
-        if response == Gtk.ResponseType.OK:                                               
-            data = load_data(dialog.get_file().get_path())
-            self.collection = data[0]
-            self.data = data
-            self.title.set_subtitle(f"Geöffnete Sammlung: {data[0]}")
-            self.stack.set_visible_child(self.page2)
-            self.paned.set_start_child(self.listbox_categories())    
-        else: pass
+    def show_error(self, message):
+        dialog = Gtk.MessageDialog(transient_for=self, modal=True,
+                                   message_type=Gtk.MessageType.ERROR,
+                                   buttons=Gtk.ButtonsType.CLOSE, text=message)
+        dialog.connect("response", lambda widget, response: widget.close())
+        dialog.present()
 
-        dialog.close()
-        
-        
+    def save_collection(self):
+        try:
+            save_data(self.data, self.collection_path)
+            return True
+        except (OSError, CollectionError) as exc:
+            self.show_error(f"Speichern fehlgeschlagen: {exc}")
+            return False
+
+    def on_close_request(self, window):
+        self.button_edit.set_active(False)
+        return self.button_edit.get_active()
+
+    def reset_editor(self):
+        self.button_edit.set_active(False)
+        if self.button_edit.get_active():
+            return False
+        self.active_snippet = None
+        self.button_edit.set_sensitive(False)
+        self.content_sourceview.get_buffer().set_text("")
+        return True
+
+    def open_collection(self, path):
+        data = load_data(path)
+        if not self.reset_editor():
+            return
+        self.data = data
+        self.collection_path = Path(path).resolve()
+        self.title.set_subtitle(f"Geöffnete Sammlung: {data[0]}")
+        self.stack.set_visible_child(self.page2)
+        self.paned.set_start_child(self.listbox_categories())
+
+    def button_new_file(self, button, entry=None):
+        entry = entry if entry is not None else button
+        title = entry.get_text().strip()
+        if not title:
+            return
+        dialog = Gtk.FileChooserDialog(title="Neue Kollektion speichern",
+                                      transient_for=self, modal=True,
+                                      action=Gtk.FileChooserAction.SAVE)
+        dialog.set_current_name("collection.col")
+        dialog.add_button("Abbrechen", Gtk.ResponseType.CANCEL)
+        dialog.add_button("Erstellen", Gtk.ResponseType.OK)
+        def response(widget, result):
+            if result == Gtk.ResponseType.OK:
+                try:
+                    path = widget.get_file().get_path()
+                    save_data([title], path)
+                    self.open_collection(path)
+                    entry.set_text("")
+                except (OSError, CollectionError) as exc:
+                    self.show_error(f"Erstellen fehlgeschlagen: {exc}")
+            widget.close()
+        dialog.connect("response", response)
+        dialog.present()
+
+    def button_dialog_response(self, dialog, response):
+        try:
+            if response == Gtk.ResponseType.OK:
+                self.open_collection(dialog.get_file().get_path())
+        except (OSError, CollectionError) as exc:
+            self.show_error(f"Öffnen fehlgeschlagen: {exc}")
+        finally:
+            dialog.close()
+
+
     def content_sourceview(self):    
         box_sourceview = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        
-        self.tabview = Adw.TabView()
-        self.tabview.add_page()
-        
-        self.tabbar = Adw.TabBar.new()
-        self.tabbar.set_view(self.tabview)
         
         self.content_sourceview = GtkSource.View()
         self.content_sourceview.set_vexpand(True)
@@ -561,6 +625,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.button_edit.set_icon_name("document-edit-symbolic")
         self.button_edit.get_style_context().add_class("flat")
         self.button_edit.get_style_context().add_class("circular")
+        self.button_edit.set_sensitive(False)
         self.button_edit.connect("toggled", self.content_button_edit_snippet)
         box_toolbar.append(self.button_edit)
 
@@ -589,48 +654,26 @@ class MainWindow(Gtk.ApplicationWindow):
 
 
     def content_button_edit_snippet(self, button):
-        
+        editing = button.get_active()
         widget = self.content_sourceview
-        buffer = widget.get_buffer()   
-
-        if self.button_edit:
-
-            widget.set_editable(True)
-            widget.set_cursor_visible(True)
-            widget.set_highlight_current_line(True)
-            #widget.set_background_pattern(True)
-            widget.set_show_right_margin(True)
-            self.button_edit = False 
-        else:
-            self.active_snippet.content = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), include_hidden_chars=True)          
-            widget.set_editable(False)
-            widget.set_cursor_visible(False)
-            widget.set_highlight_current_line(False)
-            self.button_edit = True
-            
-            save_data(self.data)        
-
+        if not editing and self.active_snippet is not None:
+            buffer = widget.get_buffer()
+            self.active_snippet.content = buffer.get_text(
+                buffer.get_start_iter(), buffer.get_end_iter(), True)
+            self.active_snippet.changed = time.time()
+            if not self.save_collection():
+                button.set_active(True)
+                return
+        widget.set_editable(editing)
+        widget.set_cursor_visible(editing)
+        widget.set_highlight_current_line(editing)
 
     def tag_list_refresh(self):
-        tags = []    
-        for i in range(len(self.data) - 1):
-            for j in range(len(self.data[i + 1])):
-                #print(self.data[i + 1][1][j].tags)
-                try:
-                    temp_data = self.data[i + 1][1][j].tags
-                    if temp_data != None:
-                        for item in temp_data:
-                            if item not in tags:
-                                tags.append(item)
-                        
-                    temp_data = None
-                except IndexError: pass
-                
-        return tags
-            
-            
-        
-        
+        return list(dict.fromkeys(
+            tag for _, snippets in self.data[1:]
+            for item in snippets for tag in (item.tags or [])))
+
+
 class Application(Adw.Application):
 
     def __init__(self):

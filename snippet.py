@@ -1,5 +1,5 @@
 class Snippet:
-    def __init__(self, category, title, created, changed="", content="", language="", description="", tags=[]):
+    def __init__(self, category, title, created, changed="", content="", language="", description="", tags=None):
         self.ident = (category + "_" + title).replace(" ", "_").lower()
         self.category = category
         self.title = title
@@ -8,7 +8,7 @@ class Snippet:
         self.content = content
         self.language = language
         self.description = description
-        self.tags = tags
+        self.tags = list(tags) if tags is not None else []
         
     def __repr__(self):
         return f"snippet-class-object: {self.ident}"
@@ -89,7 +89,7 @@ class Snippet:
 
     @snippet_tags.setter
     def snippet_tags(self, tags):
-        self.tags = tags
+        self.tags = list(tags) if tags is not None else []
         print(f'SET: Tags wurde auf "{tags}" gesetzt...')
     
 
